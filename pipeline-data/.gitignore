@@ -7,3 +7,4 @@ data/*.csv
 *.tfstate.*
 .terraform/
 terraform.tfvars
+.DS_Store
