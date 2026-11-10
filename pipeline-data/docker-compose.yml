@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: pipeline-postgres
+    environment:
+      POSTGRES_USER: pipeline
+      POSTGRES_PASSWORD: pipeline
+      POSTGRES_DB: pipeline
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pipeline -d pipeline"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Stockage S3 local. MinIO ne publie plus d'images Docker gratuites :
+  # on utilise RustFS (cité dans l'énoncé), compatible S3 et clé en main.
+  s3:
+    image: rustfs/rustfs:latest
+    container_name: pipeline-s3
+    environment:
+      RUSTFS_ACCESS_KEY: pipeline
+      RUSTFS_SECRET_KEY: pipeline-secret
+    ports:
+      - "9000:9000"   # API S3
+      - "9001:9001"   # console web
+    volumes:
+      - s3data:/data
+
+volumes:
+  pgdata:
+  s3data:

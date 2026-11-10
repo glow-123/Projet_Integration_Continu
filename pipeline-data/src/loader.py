@@ -5,6 +5,7 @@ transactions propres (montant en Decimal, date en datetime). Les calculs
 sont dans processing.py (fonctions pures), conformément à l'énoncé.
 """
 import csv
+import io
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -25,19 +26,27 @@ class InvalidCsvError(ValueError):
 
 
 def load_csv(path):
-    """Charge un fichier CSV et renvoie une liste de transactions (dict)."""
+    """Charge un fichier CSV local et renvoie une liste de transactions (dict)."""
     path = Path(path)
-    with open(path, newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        missing = [c for c in REQUIRED_COLUMNS if c not in (reader.fieldnames or [])]
-        if missing:
-            raise InvalidCsvError(f"{path.name}: colonnes manquantes {missing}")
+    return load_csv_bytes(path.read_bytes(), path.name)
 
-        transactions = []
-        for line_no, row in enumerate(reader, start=2):  # ligne 1 = en-tête
-            transactions.append(_parse_row(row, path.name, line_no))
+
+def load_csv_bytes(content, name):
+    """Charge un CSV depuis son contenu brut (ex : objet téléchargé depuis le S3)."""
+    try:
+        text = content.decode("utf-8")
+    except UnicodeDecodeError:
+        raise InvalidCsvError(f"{name}: encodage invalide (UTF-8 attendu)")
+    reader = csv.DictReader(io.StringIO(text, newline=""))
+    missing = [c for c in REQUIRED_COLUMNS if c not in (reader.fieldnames or [])]
+    if missing:
+        raise InvalidCsvError(f"{name}: colonnes manquantes {missing}")
+
+    transactions = []
+    for line_no, row in enumerate(reader, start=2):  # ligne 1 = en-tête
+        transactions.append(_parse_row(row, name, line_no))
     if not transactions:
-        raise InvalidCsvError(f"{path.name}: fichier vide")
+        raise InvalidCsvError(f"{name}: fichier vide")
     return transactions
 
 
