@@ -8,6 +8,10 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://pipeline:pipeline@localhost:5432/pipeline
+      S3_ENDPOINT_URL: http://localhost:9000
+      REQUIRE_SERVICES: "1"  # en CI, une base ou un S3 injoignable doit faire échouer les tests
     defaults:
       run:
         working-directory: pipeline-data
@@ -25,8 +29,28 @@ jobs:
       - name: Installer les dépendances
         run: pip install -r requirements.txt
 
-      - name: Lancer les tests
+      - name: Démarrer les services (PostgreSQL + S3) avec docker compose
+        run: |
+          docker compose up -d --wait
+          timeout 60 bash -c 'until curl -s -o /dev/null http://localhost:9000; do sleep 1; done'
+          echo "S3 prêt"
+
+      - name: Lancer les tests (unitaires + intégration base + S3 + retry)
         run: pytest -v
 
-      - name: Vérifier que le générateur fonctionne
-        run: python src/generate_csv.py --output-dir data
+      - name: Pipeline complète (génération -> S3 -> traitement -> base)
+        run: python src/pipeline.py --generate
+
+      - name: Relancer la pipeline (aucun fichier ne doit être retraité)
+        run: python src/pipeline.py | tee rerun.log && grep -q "0 inséré(s)" rerun.log
+
+      - name: Démo du retry (2 pannes simulées à l'insertion, puis succès)
+        run: python src/pipeline.py --generate --files 4 --seed 7 --simulate-db-failures 2 --retry-delay 0.5
+
+      - name: Logs des services en cas d'échec
+        if: failure()
+        run: docker compose logs
+
+      - name: Arrêter les services
+        if: always()
+        run: docker compose down -v

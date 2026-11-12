@@ -8,3 +8,4 @@ data/*.csv
 .terraform/
 terraform.tfvars
 .DS_Store
+.venv/
