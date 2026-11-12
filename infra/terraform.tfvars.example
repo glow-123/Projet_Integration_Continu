@@ -1,0 +1,7 @@
+# Copie ce fichier en "terraform.tfvars" puis remplis les valeurs.
+# terraform.tfvars est ignoré par git : ne le commit JAMAIS.
+postgres_password = "change-me-long-password"
+s3_secret_key     = "change-me-long-secret"
+ssh_allowed_cidr  = "*"            # mets plutôt ton IP : "x.x.x.x/32"
+# location        = "francecentral"
+# vm_size         = "Standard_B2s"
