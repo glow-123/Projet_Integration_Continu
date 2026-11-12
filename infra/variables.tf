@@ -1,7 +1,7 @@
 variable "location" {
   description = "Région Azure. Si Azure refuse (RequestDisallowedByAzure), essaie une autre région autorisée pour ta souscription étudiante."
   type        = string
-  default     = "francecentral"
+  default     = "spaincentral"
 }
 
 variable "prefix" {
@@ -13,7 +13,7 @@ variable "prefix" {
 variable "vm_size" {
   description = "Taille de la VM. Si indisponible dans ta région/souscription, essaie Standard_B2s_v2 ou Standard_D2s_v3."
   type        = string
-  default     = "Standard_B2s"
+  default     = "Standard_B2s_v2"
 }
 
 variable "admin_username" {

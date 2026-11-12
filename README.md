@@ -115,6 +115,14 @@ Le workflow `.github/workflows/terraform.yml` exécute `fmt -check`, `init` et `
 à chaque pull request qui touche `infra/`. Instructions de déploiement : [`infra/README.md`](infra/README.md)
 (`terraform init` / `plan` / `apply`, puis `terraform destroy` pour ne pas consommer de crédit).
 
+**Déploiement réel (12/11/2026)** : `terraform apply` depuis Azure Cloud Shell sur une
+souscription *Azure for Students* → **11 ressources créées** dans `rg-pipeline`
+(région **Spain Central**, VM `Standard_B2s_v2` : France Central est interdite par la
+politique de la souscription et `Standard_B2s` n'avait plus de capacité). Au premier
+démarrage, la VM a installé Docker, cloné le dépôt et lancé les **3 conteneurs** ;
+la pipeline a inséré **24 transactions**, puis ignore les fichiers déjà traités.
+Après la présentation : `terraform destroy`.
+
 ## Pistes d'amélioration
 
 OCR sur des images de relevés, extraction de transactions depuis du texte avec un petit

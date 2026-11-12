@@ -3,5 +3,5 @@
 postgres_password = "change-me-long-password"
 s3_secret_key     = "change-me-long-secret"
 ssh_allowed_cidr  = "*"            # mets plutôt ton IP : "x.x.x.x/32"
-# location        = "francecentral"
-# vm_size         = "Standard_B2s"
+# location        = "spaincentral"   # régions autorisées (Azure for Students) : spaincentral, denmarkeast, norwayeast, switzerlandnorth, belgiumcentral
+# vm_size         = "Standard_B2s_v2"
