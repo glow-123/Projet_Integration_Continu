@@ -7,7 +7,7 @@ Une fonction pure :
 """
 from decimal import Decimal
 
-FLAG_THRESHOLD = Decimal("500")
+FLAG_THRESHOLD = Decimal("5000")
 
 
 def _sum_by(transactions, group_key):
