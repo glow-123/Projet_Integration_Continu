@@ -1,0 +1,15 @@
+#cloud-config
+# Exécuté UNE fois, au premier démarrage de la VM.
+write_files:
+  - path: /opt/pipeline.env
+    permissions: "0600"
+    content: |
+      POSTGRES_PASSWORD=${postgres_password}
+      S3_SECRET_KEY=${s3_secret_key}
+
+runcmd:
+  - curl -fsSL https://get.docker.com | sh
+  - usermod -aG docker ${admin_username}
+  - git clone --depth 1 ${repo_url} /opt/app
+  - cp /opt/pipeline.env /opt/app/pipeline-data/.env
+  - cd /opt/app/pipeline-data && docker compose -p pipeline-prod -f docker-compose.prod.yml up -d --build

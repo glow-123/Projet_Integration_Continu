@@ -1,0 +1,8 @@
+# Fichiers Terraform à ne JAMAIS envoyer sur GitHub
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+*.tfvars
+*.tfvars.json
+!terraform.tfvars.example
