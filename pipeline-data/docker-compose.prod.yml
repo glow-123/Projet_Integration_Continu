@@ -1,0 +1,46 @@
+# Environnement de PRODUCTION (déployé sur la VM par la CD).
+# Les mots de passe viennent du fichier .env (créé par le workflow depuis les secrets GitHub).
+# Aucun port n'est exposé vers l'extérieur : les services se parlent sur le réseau Docker interne.
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pipeline
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD manquant}
+      POSTGRES_DB: pipeline
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pipeline -d pipeline"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  s3:
+    image: rustfs/rustfs:latest
+    restart: unless-stopped
+    environment:
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY:-pipeline}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY:?S3_SECRET_KEY manquant}
+    volumes:
+      - s3data:/data
+
+  pipeline:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      s3:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql://pipeline:${POSTGRES_PASSWORD}@postgres:5432/pipeline
+      S3_ENDPOINT_URL: http://s3:9000
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-pipeline}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      INTERVAL_SECONDS: ${INTERVAL_SECONDS:-60}
+
+volumes:
+  pgdata:
+  s3data:

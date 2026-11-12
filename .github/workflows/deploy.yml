@@ -1,0 +1,62 @@
+name: Deploy (CD)
+
+# Déploiement automatique sur la VM, uniquement si la CI est verte sur main.
+# Peut aussi être lancé à la main (onglet Actions -> Deploy -> Run workflow).
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Si lancé par la CI : seulement quand elle a réussi
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    env:
+      VM_HOST: ${{ secrets.VM_HOST }}
+      VM_USER: ${{ secrets.VM_USER }}
+      SSHPASS: ${{ secrets.VM_PASSWORD }}
+      SSH_OPTS: -o StrictHostKeyChecking=accept-new
+    steps:
+      - name: Récupérer le code validé par la CI
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Installer sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+
+      - name: Créer le fichier .env de production (depuis les secrets)
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
+        run: |
+          printf 'POSTGRES_PASSWORD=%s\nS3_SECRET_KEY=%s\nINTERVAL_SECONDS=60\n' \
+            "$POSTGRES_PASSWORD" "$S3_SECRET_KEY" > pipeline-data/.env
+
+      - name: Vérifier la connexion à la VM et Docker
+        run: sshpass -e ssh $SSH_OPTS "$VM_USER@$VM_HOST" 'docker --version && docker compose version'
+
+      - name: Copier le code sur la VM
+        run: |
+          sshpass -e rsync -az --delete \
+            --exclude tests --exclude data --exclude __pycache__ \
+            -e "ssh $SSH_OPTS" \
+            pipeline-data/ "$VM_USER@$VM_HOST:~/pipeline/"
+
+      - name: Construire et démarrer les conteneurs
+        run: |
+          sshpass -e ssh $SSH_OPTS "$VM_USER@$VM_HOST" \
+            'cd ~/pipeline && docker compose -p pipeline-prod -f docker-compose.prod.yml up -d --build && docker compose -p pipeline-prod -f docker-compose.prod.yml ps'
+
+      - name: Vérifier que la pipeline tourne (logs)
+        run: |
+          sleep 40
+          sshpass -e ssh $SSH_OPTS "$VM_USER@$VM_HOST" \
+            'cd ~/pipeline && docker compose -p pipeline-prod -f docker-compose.prod.yml logs --tail 30 pipeline'
